@@ -8,6 +8,7 @@ const bcrypt = require("bcryptjs");
 //all of the models are imported here
 const Event = require("./models/event");
 const User = require("./models/user");
+const user = require("./models/user");
 
 const app = express();
 
@@ -99,9 +100,14 @@ app.use(
                });
          },
          createUser: (args) => {
-            // first hash arg is the password, second arg is number of time to salt
-            return bcrypt
-               .hash(args.userInput.password, 12)
+            return User.findOne({ email: args.userInput.email })
+               .then((user) => {
+                  if (user) {
+                     throw new Error("Email address exists already.");
+                  }
+                  // first hash arg is the password, second arg is number of times to salt
+                  return bcrypt.hash(args.userInput.password, 12);
+               })
                .then((hashedpw) => {
                   //args.userInput.email, args is all incoming data
                   //userInput referse that it is type userInput as defined in schema
@@ -115,7 +121,7 @@ app.use(
                .then((res) => {
                   //this returns the item we created
                   //while overwriting the id with an appropriatly usable id
-                  return { ...res._doc, _id: res.id };
+                  return { ...res._doc, password: null, _id: user.id };
                })
                .catch((err) => {
                   throw err;
