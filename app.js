@@ -3,8 +3,11 @@ const bodyParser = require("body-parser");
 const graphqlhttp = require("express-graphql");
 const { buildSchema } = require("graphql");
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
+//all of the models are imported here
 const Event = require("./models/event");
+const User = require("./models/user");
 
 const app = express();
 
@@ -17,35 +20,50 @@ app.use(bodyParser.json());
 // ~ rootValue stores our resolvers for our requests, they must be the same name as the schema called them
 // ~ ID is a special type in graphql and the (!) means that it is required inside of the event type
 // ~ input is a special type of data for how data must inputted for mutation
+// ~ User password is not require because we will not ever want to return the password
 app.use(
    "/graphql",
    graphqlhttp({
       schema: buildSchema(` 
-        type Event {
+         type Event {
             _id: ID!
             title: String!
             description: String!
             price: Float!
             date: String!
-        }
-        input EventInput {
+         }
+
+         input EventInput {
             title: String!
             description: String!
             price: Float!
             date: String!
-        }
-        type RootQuery {
+         }
+
+         type User {
+            _id: ID!
+            email: String!
+            password: String
+         }
+
+         input UserInput {
+            email: String!
+            password: String!
+         }
+
+         type RootQuery {
             events: [Event!]!
-        }
+         }
 
-        type RootMutation{
+         type RootMutation{
             createEvent(eventInput: EventInput): Event
-        }
+            createUser(userInput: UserInput): User
+         }
 
-        schema {
+         schema {
             query: RootQuery
             mutation: RootMutation
-        }`),
+         }`),
       rootValue: {
          //allows events to be found and returned
          events: () => {
@@ -67,6 +85,8 @@ app.use(
                price: +args.eventInput.price,
                date: new Date(args.eventInput.date),
             });
+            //we must let express know we are performing async by using return
+            //without return express will just finish this codeblock without waiting
             return event
                .save()
                .then((res) => {
@@ -75,6 +95,29 @@ app.use(
                })
                .catch((err) => {
                   console.log(err);
+                  throw err;
+               });
+         },
+         createUser: (args) => {
+            // first hash arg is the password, second arg is number of time to salt
+            return bcrypt
+               .hash(args.userInput.password, 12)
+               .then((hashedpw) => {
+                  //args.userInput.email, args is all incoming data
+                  //userInput referse that it is type userInput as defined in schema
+                  //.email references that specific peice of info inside of userinput
+                  const user = new User({
+                     email: args.userInput.email,
+                     password: hashedpw,
+                  });
+                  return user.save();
+               })
+               .then((res) => {
+                  //this returns the item we created
+                  //while overwriting the id with an appropriatly usable id
+                  return { ...res._doc, _id: res.id };
+               })
+               .catch((err) => {
                   throw err;
                });
          },
