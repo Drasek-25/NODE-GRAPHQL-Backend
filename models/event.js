@@ -19,7 +19,12 @@ const eventSchema = new Schema({
       type: Date,
       required: true,
    },
+   creator: {
+      type: Schema.Types.ObjectId,
+      //called 'User' because the model for users is named such
+      // a similar ref is added to User to tie them together
+      ref: "User",
+   },
 });
 
-//this exports the schema as a module for consumption elsewhere
 module.exports = mongoose.model("Event", eventSchema);

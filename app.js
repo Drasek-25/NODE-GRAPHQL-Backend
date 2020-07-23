@@ -47,6 +47,7 @@ app.use(
             mutation: RootMutation
         }`),
       rootValue: {
+         //allows events to be found and returned
          events: () => {
             return Event.find()
                .then((events) => {
@@ -58,6 +59,7 @@ app.use(
                   throw err;
                });
          },
+         //allows incoming events to be added to DB
          createEvent: (args) => {
             const event = new Event({
                title: args.eventInput.title,
@@ -69,7 +71,7 @@ app.use(
                .save()
                .then((res) => {
                   console.log(res);
-                  return { ...res._doc, _id: res._doc._id.toString() };
+                  return { ...res._doc, _id: event.id };
                })
                .catch((err) => {
                   console.log(err);
@@ -81,6 +83,7 @@ app.use(
    })
 );
 
+// connecting the api to mongoDB atlas via mongoose
 mongoose
    .connect(
       `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@eventspagegraphql.74paq.mongodb.net/${process.env.MONGO_DB_NAME}?retryWrites=true&w=majority`
