@@ -8,7 +8,6 @@ const bcrypt = require("bcryptjs");
 //all of the models are imported here
 const Event = require("./models/event");
 const User = require("./models/user");
-const user = require("./models/user");
 
 const app = express();
 
@@ -85,14 +84,27 @@ app.use(
                description: args.eventInput.description,
                price: +args.eventInput.price,
                date: new Date(args.eventInput.date),
+               creator: "5f19fa5a57a5c6154806aa34",
             });
+
+            let createdEvent;
             //we must let express know we are performing async by using return
             //without return express will just finish this codeblock without waiting
             return event
                .save()
                .then((res) => {
-                  console.log(res);
-                  return { ...res._doc, _id: event.id };
+                  createdEvent = { ...res._doc, _id: event.id };
+                  return User.findById("5f19fa5a57a5c6154806aa34");
+               })
+               .then((user) => {
+                  if (!user) {
+                     throw new Error("User not found.");
+                  }
+                  user.createdEvents.push(event);
+                  return user.save();
+               })
+               .then(() => {
+                  return createdEvent;
                })
                .catch((err) => {
                   console.log(err);
